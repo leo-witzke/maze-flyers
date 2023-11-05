@@ -1,0 +1,58 @@
+<launch>
+    <arg name="world_name" default="$(find leo_erc_gazebo_worlds)/worlds/marsyard2021.world"/>
+    <arg name="paused" default="false"/>
+    <arg name="gui" default="true"/>
+    <arg name="debug" default="false"/>
+    <arg name="verbose" default="false"/>
+
+    <include file="$(find gazebo_ros)/launch/empty_world.launch">
+        <arg name="world_name" value="$(arg world_name)"/>
+        <arg name="paused" value="$(arg paused)"/>
+        <arg name="gui" value="$(arg gui)"/>
+        <arg name="debug" value="$(arg debug)"/>
+        <arg name="verbose" value="$(arg verbose)"/>
+    </include>
+
+    <arg name="camera_xacro" default="$(find aruco)/urdf/camera.urdf.xacro"/>
+    <param name="camera_urdf" command="xacro $(arg camera_xacro)"/>
+
+    <node name="urdf_spawner"
+          pkg="gazebo_ros"
+          type="spawn_model"
+          respawn="false"
+          args="-urdf 
+      -x 3 -y 17 -z 1
+      -R 0 -P 0 -Y 0
+      -model camera 
+      -param camera_urdf
+    "/>
+
+    <!-- apriltag_ros continuous detection node -->
+    <node pkg="apriltag_ros" type="apriltag_ros_continuous_node" name="apriltag_ros_continuous_node" clear_params="true" output="screen">
+        <!-- Remap topics from those used in code to those on the ROS network -->
+        <remap from="image_rect" to="/example_camera/image_raw" />
+        <remap from="camera_info" to="/example_camera/camera_info" />
+
+        <param name="publish_tag_detections_image" type="bool" value="true" />
+        <param name="queue_size" type="int" value="1" />
+
+        <!-- load parameters (incl. tag family, tags, etc.) -->
+        <rosparam command="load" file="$(find aruco)/config/settings.yaml"/>
+        <rosparam command="load" file="$(find aruco)/config/tags.yaml"/>
+    </node>
+
+    <!-- <node name="aruco_detect" pkg="aruco_detect" type="aruco_detect">
+        <param name="image_transport" value="compressed" /> -->
+        <!-- <param name="publish_images" value="true" /> -->
+        <!-- <param name="fiducial_len" value="0.20" /> -->
+        <!-- <param name="dictionary" value="0" /> -->
+        <!-- <param name="do_pose_estimation" value="true" /> -->
+        <!-- <param name="ignore_fiducials" value="" /> -->
+        <!-- <param name="fiducial_len_override" value="" /> -->
+        <!-- <remap from="/camera/compressed" to="/example_camera/image_raw/compressed"/>
+        <remap from="/camera_info" to="/example_camera/camera_info"/>
+    </node> -->
+
+    <node name="keyboard_move" pkg="aruco" type="keyboard_move.py"/>
+
+</launch>
